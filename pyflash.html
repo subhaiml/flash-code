@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PyFlash — Output Guessing Drill</title>
+<style>
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: local('JetBrains Mono');
+}
+:root{
+  --bg: #14171c;
+  --bg-raised: #1b1f26;
+  --bg-inset: #0f1216;
+  --line: #2a2f38;
+  --line-soft: #22262e;
+  --text: #e7e5df;
+  --text-dim: #8a8f99;
+  --text-faint: #565c68;
+  --amber: #e8a33d;
+  --amber-dim: #7a5a28;
+  --green: #7fb069;
+  --red: #d1665e;
+  --blue: #6ea8d8;
+  --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, 'SF Mono', Consolas, monospace;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+body::before{
+  content:'';
+  position: fixed; inset:0;
+  background-image:
+    linear-gradient(var(--line-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+#app{
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 18px 40px;
+}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding-bottom: 18px;
+  margin-bottom: 4px;
+}
+.brand{
+  display:flex; align-items:center; gap:10px;
+}
+.brand-dot{
+  width:10px;height:10px;border-radius:2px;
+  background: var(--amber);
+  box-shadow: 0 0 12px rgba(232,163,61,0.6);
+}
+.brand-name{
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+.brand-name span{ color: var(--amber); }
+.stats-strip{
+  display:flex; gap: 16px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.stats-strip b{ color: var(--text); font-weight: 600;}
+.stat-streak b{ color: var(--amber); }
+
+/* ---------- Screens ---------- */
+.screen{ display:none; flex: 1; flex-direction: column; }
+.screen.active{ display:flex; }
+
+/* ---------- HOME ---------- */
+#screen-home{ justify-content: center; gap: 28px; padding-bottom: 10vh;}
+.home-hero{
+  text-align:left;
+}
+.home-eyebrow{
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--amber);
+  margin-bottom: 10px;
+  display:flex; align-items:center; gap:8px;
+}
+.home-eyebrow::before{
+  content:'';
+  width:18px; height:1px;
+  background: var(--amber-dim);
+  display:inline-block;
+}
+.home-title{
+  font-family: var(--mono);
+  font-size: clamp(30px, 8vw, 42px);
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.home-title .accent{ color: var(--amber); }
+.home-sub{
+  font-family: var(--sans);
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  max-width: 50ch;
+}
+.home-sub code{
+  font-family: var(--mono);
+  background: var(--bg-inset);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--amber);
+  font-size: 0.9em;
+}
+
+.mode-grid{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.mode-card{
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 16px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+  text-align: left;
+  font-family: var(--sans);
+  position: relative;
+}
+.mode-card:hover{ border-color: var(--amber-dim); }
+.mode-card:active{ transform: scale(0.98); }
+.mode-card.selected{
+  border-color: var(--amber);
+  background: linear-gradient(180deg, rgba(232,163,61,0.08), var(--bg-raised) 60%);
+}
+.mode-card-label{
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.mode-card-desc{
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.mode-card-check{
+  position:absolute; top:12px; right:12px;
+  width:16px; height:16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+}
+.mode-card.selected .mode-card-check{
+  border-color: var(--amber);
+  background: var(--amber);
+}
+.mode-card.selected .mode-card-check::after{
+  content:'';
+  width:5px;height:8px;
+  border-right:2px solid var(--bg);
+  border-bottom:2px solid var(--bg);
+  transform: rotate(45deg) translate(-1px,-1px);
+}
+
+.timer-select{
+  display:flex; gap:8px; align-items:center;
+}
+.timer-select-label{
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+}
+.timer-pill{
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--bg-raised);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.timer-pill.selected{
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(232,163,61,0.1);
+}
+
+.start-btn{
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--amber);
+  border: none;
+  border-radius: 10px;
+  padding: 16px 24px;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: 0 4px 0 var(--amber-dim);
+  display: flex; align-items:center; justify-content:center; gap: 10px;
+}
+.start-btn:hover{ box-shadow: 0 5px 0 var(--amber-dim); transform: translateY(-1px); }
+.start-btn:active{ box-shadow: 0 1px 0 var(--amber-dim); transform: translateY(3px); }
+.start-btn .kbd-hint{
+  font-size: 11px;
+  opacity: 0.65;
+  border: 1px solid rgba(20,23,28,0.4);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.home-footer-note{
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+  display:flex; align-items:center; gap:8px;
+}
+.home-footer-note .pool-count{ color: var(--text-dim); }
+
+/* ---------- QUIZ ---------- */
+#screen-quiz{ justify-content: flex-start; gap: 18px; }
+
+.quiz-hud{
+  display:flex; align-items:center; justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.hud-progress{ display:flex; align-items:center; gap:10px; }
+.progress-track{
+  width: 90px; height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background: var(--amber);
+  width:0%;
+  transition: width 0.25s ease;
+}
+.hud-score b{ color: var(--text); }
+.hud-streak{ color: var(--amber); }
+
+.timer-ring-wrap{
+  position: relative;
+  width: 46px; height: 46px;
+  flex-shrink:0;
+}
+.timer-ring-wrap svg{ width:100%; height:100%; transform: rotate(-90deg); }
+.timer-ring-bg{ fill:none; stroke: var(--line); stroke-width: 4; }
+.timer-ring-fg{ fill:none; stroke: var(--amber); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.1s linear, stroke 0.2s ease; }
+.timer-ring-num{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family: var(--mono); font-size: 15px; font-weight:700;
+  color: var(--text);
+}
+.timer-ring-wrap.urgent .timer-ring-fg{ stroke: var(--red); }
+.timer-ring-wrap.urgent .timer-ring-num{ color: var(--red); }
+
+.code-stage{
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink:0;
+}
+.code-stage-bar{
+  display:flex; align-items:center; gap:6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-raised);
+}
+.code-dot{ width:9px; height:9px; border-radius:50%; }
+.code-dot.r{ background:#d1665e44; }
+.code-dot.y{ background:#e8a33d44; }
+.code-dot.g{ background:#7fb06944; }
+.code-stage-label{
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.code-stage-body{
+  padding: 26px 22px;
+  min-height: 180px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.code-stage-body pre{
+  font-family: var(--mono);
+  font-size: clamp(14px, 4vw, 17px);
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  width:100%;
+}
+.code-kw{ color: #c586c0; }
+.code-str{ color: #7fb069; }
+.code-num{ color: #d19a66; }
+.code-com{ color: var(--text-faint); font-style: italic; }
+.code-fn{ color: #6ea8d8; }
+.code-blank-wait{
+  font-family: var(--mono);
+  color: var(--text-faint);
+  font-size: 14px;
+  text-align:center;
+}
+.memorize-bar-track{
+  height:3px;
+  background: var(--line-soft);
+}
+.memorize-bar-fill{
+  height:100%;
+  background: linear-gradient(90deg, var(--amber), var(--green));
+  width:100%;
+  transform-origin: left;
+}
+
+.recall-banner{
+  text-align:center;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text-dim);
+  letter-spacing: 0.03em;
+  padding: 2px 0;
+}
+.recall-banner b{ color: var(--amber); }
+
+.options-grid{
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.option-btn{
+  display:flex; align-items:center; gap:12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 14.5px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.08s ease;
+  white-space: pre-wrap;
+}
+.option-btn:hover:not(:disabled){ border-color: var(--text-faint); }
+.option-btn:active:not(:disabled){ transform: scale(0.99); }
+.option-key{
+  flex-shrink:0;
+  width:22px; height:22px;
+  border-radius:5px;
+  border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  font-size:11.5px;
+  color: var(--text-faint);
+}
+.option-btn:disabled{ cursor: default; }
+.option-btn.correct{
+  border-color: var(--green);
+  background: rgba(127,176,105,0.12);
+}
+.option-btn.correct .option-key{ border-color: var(--green); color: var(--green); }
+.option-btn.wrong{
+  border-color: var(--red);
+  background: rgba(209,102,94,0.12);
+}
+.option-btn.wrong .option-key{ border-color: var(--red); color: var(--red); }
+.option-btn.faded{ opacity: 0.4; }
+
+.feedback-strip{
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align:center;
+  padding: 10px;
+  border-radius: 8px;
+  min-height: 20px;
+}
+.feedback-strip.correct{ color: var(--green); }
+.feedback-strip.wrong{ color: var(--red); }
+
+.next-hint{
+  text-align:center;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* ---------- RESULTS ---------- */
+#screen-results{ justify-content:center; gap: 22px; padding-bottom: 8vh; }
+.results-score-row{
+  display:flex; align-items:baseline; gap: 14px;
+}
+.results-score-num{
+  font-family: var(--mono);
+  font-size: 64px;
+  font-weight: 700;
+  color: var(--amber);
+  line-height: 1;
+}
+.results-score-den{
+  font-family: var(--mono);
+  font-size: 22px;
+  color: var(--text-faint);
+}
+.results-label{
+  font-family: var(--sans);
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.results-grid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.results-stat{
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 12px;
+}
+.results-stat-num{
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.results-stat-label{
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 3px;
+}
+.results-tag-breakdown{
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+.results-tag-title{
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.tag-row{
+  display:flex; align-items:center; gap:10px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  padding: 5px 0;
+}
+.tag-row-name{ width: 130px; color: var(--text-dim); flex-shrink:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.tag-row-bar{ flex:1; height:6px; background: var(--line); border-radius:3px; overflow:hidden;}
+.tag-row-fill{ height:100%; background: var(--green); }
+.tag-row-fill.weak{ background: var(--red); }
+.tag-row-fill.mid{ background: var(--amber); }
+.tag-row-frac{ color: var(--text-faint); width:38px; text-align:right; flex-shrink:0;}
+
+.results-actions{ display:flex; gap:10px; }
+.btn-secondary{
+  flex:1;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+}
+.btn-secondary:hover{ border-color: var(--text-faint); }
+.btn-primary{
+  flex:1;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--amber);
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+}
+
+.best-badge{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--green);
+  background: rgba(127,176,105,0.1);
+  border: 1px solid rgba(127,176,105,0.3);
+  padding: 4px 10px;
+  border-radius: 20px;
+  width: fit-content;
+}
+
+@media (max-width: 420px){
+  .mode-grid{ grid-template-columns: 1fr; }
+  .results-grid{ grid-template-columns: repeat(3, 1fr); }
+  .home-title{ font-size: 26px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; animation: none !important; }
+}
+
+.hidden{ display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div class="brand-name">py<span>flash</span>_</div>
+    </div>
+    <div class="stats-strip" id="topStats">
+      <span>best <b id="topBest">—</b></span>
+      <span class="stat-streak">streak <b id="topStreak">0</b></span>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="home-hero">
+      <div class="home-eyebrow">rapid output recall</div>
+      <div class="home-title">Guess the<br><span class="accent">output</span>, fast.</div>
+      <div class="home-sub">A snippet flashes on screen for a few seconds. It disappears. Four options appear. You pick the real output before the clock runs out. Same format as the event — <code>print()</code> and all.</div>
+    </div>
+
+    <div>
+      <div class="timer-select-label" style="margin-bottom:8px; display:block;">Round length</div>
+      <div class="mode-grid" id="lengthGrid">
+        <div class="mode-card selected" data-len="10">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">10 rounds</div>
+          <div class="mode-card-desc">Quick warm-up</div>
+        </div>
+        <div class="mode-card" data-len="20">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">20 rounds</div>
+          <div class="mode-card-desc">Standard drill</div>
+        </div>
+        <div class="mode-card" data-len="30">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">30 rounds</div>
+          <div class="mode-card-desc">Full simulation</div>
+        </div>
+        <div class="mode-card" data-len="9999">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">Marathon</div>
+          <div class="mode-card-desc">Until you quit</div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="timer-select-label" style="margin-bottom:8px; display:block;">Difficulty</div>
+      <div class="mode-grid" id="diffGrid">
+        <div class="mode-card selected" data-diff="all">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">All levels</div>
+          <div class="mode-card-desc">Mixed difficulty</div>
+        </div>
+        <div class="mode-card" data-diff="easy">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">Easy</div>
+          <div class="mode-card-desc">Core fundamentals</div>
+        </div>
+        <div class="mode-card" data-diff="medium">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">Medium</div>
+          <div class="mode-card-desc">Common gotchas</div>
+        </div>
+        <div class="mode-card" data-diff="hard">
+          <div class="mode-card-check"></div>
+          <div class="mode-card-label">Hard</div>
+          <div class="mode-card-desc">Deep internals</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timer-select">
+      <span class="timer-select-label">Flash time</span>
+      <div class="timer-pill" data-secs="5">5s</div>
+      <div class="timer-pill selected" data-secs="7">7s</div>
+      <div class="timer-pill" data-secs="10">10s</div>
+    </div>
+
+    <button class="start-btn" id="startBtn">start round <span class="kbd-hint">↵</span></button>
+
+    <div class="home-footer-note"><span class="pool-count" id="poolCount">262</span> snippets in the pool — shuffled and de-duplicated each run</div>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="screen" id="screen-quiz">
+    <div class="quiz-hud">
+      <div class="hud-progress">
+        <span id="hudQNum">Q1/10</span>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <div class="hud-score">score <b id="hudScore">0</b> <span class="hud-streak" id="hudStreak"></span></div>
+    </div>
+
+    <div class="code-stage">
+      <div class="code-stage-bar">
+        <div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div>
+        <div class="code-stage-label" id="stageLabel">memorize.py</div>
+        <div style="margin-left:auto;" class="timer-ring-wrap" id="timerRing">
+          <svg viewBox="0 0 46 46">
+            <circle class="timer-ring-bg" cx="23" cy="23" r="19"></circle>
+            <circle class="timer-ring-fg" id="ringFg" cx="23" cy="23" r="19" stroke-dasharray="119.4" stroke-dashoffset="0"></circle>
+          </svg>
+          <div class="timer-ring-num" id="ringNum">7</div>
+        </div>
+      </div>
+      <div class="code-stage-body" id="codeStageBody">
+        <pre id="codeDisplay"></pre>
+      </div>
+      <div class="memorize-bar-track"><div class="memorize-bar-fill" id="memorizeBar"></div></div>
+    </div>
+
+    <div class="recall-banner hidden" id="recallBanner">what did it print? <b id="recallTimer">10</b>s left</div>
+
+    <div class="options-grid hidden" id="optionsGrid"></div>
+
+    <div class="feedback-strip" id="feedbackStrip"></div>
+
+    <div class="next-hint hidden" id="nextHint">tap anywhere or press ↵ for next question</div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="screen" id="screen-results">
+    <div id="bestBadgeWrap"></div>
+    <div>
+      <div class="results-score-row">
+        <div class="results-score-num" id="resScore">0</div>
+        <div class="results-score-den">/ <span id="resTotal">10</span></div>
+      </div>
+      <div class="results-label" id="resLabel">Keep drilling — speed comes with reps.</div>
+    </div>
+
+    <div class="results-grid">
+      <div class="results-stat">
+        <div class="results-stat-num" id="resAcc">0%</div>
+        <div class="results-stat-label">accuracy</div>
+      </div>
+      <div class="results-stat">
+        <div class="results-stat-num" id="resAvgTime">0.0s</div>
+        <div class="results-stat-label">avg answer time</div>
+      </div>
+      <div class="results-stat">
+        <div class="results-stat-num" id="resBestStreak">0</div>
+        <div class="results-stat-label">best streak</div>
+      </div>
+    </div>
+
+    <div class="results-tag-breakdown">
+      <div class="results-tag-title">weak spots</div>
+      <div id="tagBreakdown"></div>
+    </div>
+
+    <div class="results-actions">
+      <button class="btn-secondary" id="reviewBtn">review misses</button>
+      <button class="btn-primary" id="playAgainBtn">play again</button>
+    </div>
+  </div>
+
+  <!-- REVIEW -->
+  <div class="screen" id="screen-review">
+    <div class="quiz-hud">
+      <span style="font-family:var(--mono); font-size:13px; color:var(--text-dim);">reviewing misses</span>
+      <button class="btn-secondary" style="flex:none; padding:8px 14px;" id="backFromReview">back</button>
+    </div>
+    <div id="reviewList" style="display:flex; flex-direction:column; gap:14px;"></div>
+  </div>
+
+</div>
+
+<script>
+const QUESTION_BANK = [
+{code:`x = [1, 2, 3]\ny = x\ny.append(4)\nprint(x)`, options:[`[1, 2, 3]`,`[1, 2, 3, 4]`,`Error`,`[4]`], answer:1, difficulty:'easy', tag:'mutability'},
+{code:`print(2 ** 3 ** 2)`, options:[`64`,`512`,`729`,`Error`], answer:1, difficulty:'medium', tag:'operators'},
+{code:`a = [1, 2, 3]\nb = a[:]\nb.append(4)\nprint(a)`, options:[`[1, 2, 3, 4]`,`[1, 2, 3]`,`Error`,`[4]`], answer:1, difficulty:'easy', tag:'slicing'},
+{code:`def f(x, l=[]):\n    l.append(x)\n    return l\nprint(f(1))\nprint(f(2))`, options:[`[1]\n[2]`,`[1]\n[1, 2]`,`[1, 2]\n[1, 2]`,`Error`], answer:1, difficulty:'hard', tag:'mutable-default'},
+{code:`print(0.1 + 0.2 == 0.3)`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'medium', tag:'floats'},
+{code:`x = 5\ndef f():\n    print(x)\n    x = 10\nf()`, options:[`5`,`10`,`UnboundLocalError`,`NameError`], answer:2, difficulty:'hard', tag:'scoping'},
+{code:`print("abc"[::-1])`, options:[`abc`,`cba`,`Error`,`''`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print(bool("False"))`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'truthiness'},
+{code:`print(1 == 1.0)`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'types'},
+{code:`print([1, 2] + [3, 4])`, options:[`[1, 2, 3, 4]`,`[4, 6]`,`Error`,`[[1, 2], [3, 4]]`], answer:0, difficulty:'easy', tag:'lists'},
+{code:`print("5" * 3)`, options:[`15`,`555`,`Error`,`5 5 5`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print(set([1, 2, 2, 3]))`, options:[`{1, 2, 2, 3}`,`{1, 2, 3}`,`[1, 2, 3]`,`Error`], answer:1, difficulty:'easy', tag:'sets'},
+{code:`for i in range(3):\n    pass\nprint(i)`, options:[`2`,`3`,`Error`,`0`], answer:0, difficulty:'medium', tag:'loops'},
+{code:`x = (1)\ny = (1,)\nprint(type(x), type(y))`, options:[`<class 'tuple'> <class 'tuple'>`,`<class 'int'> <class 'tuple'>`,`<class 'tuple'> <class 'int'>`,`<class 'int'> <class 'int'>`], answer:1, difficulty:'medium', tag:'tuples'},
+{code:`print(list(range(5))[1:3])`, options:[`[1, 2]`,`[1, 2, 3]`,`[2, 3]`,`[0, 1, 2]`], answer:0, difficulty:'easy', tag:'slicing'},
+{code:`d = {"a": 1, "b": 2}\nfor k in d:\n    d[k] = d[k] + 1\nprint(d)`, options:[`{'a': 2, 'b': 3}`,`{'a': 1, 'b': 2}`,`Error`,`{'a': 1, 'b': 3}`], answer:0, difficulty:'medium', tag:'dicts'},
+{code:`print(3 // 2)`, options:[`1.5`,`1`,`2`,`Error`], answer:1, difficulty:'easy', tag:'operators'},
+{code:`print(-7 // 2)`, options:[`-3`,`-4`,`-3.5`,`3`], answer:1, difficulty:'medium', tag:'operators'},
+{code:`print(-7 % 3)`, options:[`-1`,`2`,`1`,`-2`], answer:1, difficulty:'hard', tag:'operators'},
+{code:`a, b = b, a = 1, 2\nprint(a, b)`, options:[`2 1`,`1 2`,`Error: SyntaxError`,`Error: NameError`], answer:2, difficulty:'hard', tag:'assignment'},
+{code:`print(type(1/1))`, options:[`<class 'int'>`,`<class 'float'>`,`<class 'complex'>`,`Error`], answer:1, difficulty:'medium', tag:'types'},
+{code:`x = [1, [2, 3], 4]\ny = x.copy()\ny[1].append(99)\nprint(x)`, options:[`[1, [2, 3], 4]`,`[1, [2, 3, 99], 4]`,`Error`,`[1, [2, 3], 4, 99]`], answer:1, difficulty:'hard', tag:'shallow-copy'},
+{code:`print("Hello" + " " + "World")`, options:[`HelloWorld`,`Hello World`,`Error`,`Hello  World`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print(len({1: 'a', 2: 'b', 1: 'c'}))`, options:[`3`,`2`,`1`,`Error`], answer:1, difficulty:'medium', tag:'dicts'},
+{code:`x = None\nprint(x == None)\nprint(x is None)`, options:[`True\nTrue`,`False\nFalse`,`True\nFalse`,`False\nTrue`], answer:0, difficulty:'easy', tag:'none'},
+{code:`print([i for i in range(10) if i % 2 == 0])`, options:[`[1, 3, 5, 7, 9]`,`[0, 2, 4, 6, 8]`,`[0, 1, 2, 3, 4]`,`Error`], answer:1, difficulty:'easy', tag:'comprehension'},
+{code:`def f(*args):\n    return sum(args)\nprint(f(1, 2, 3))`, options:[`6`,`(1, 2, 3)`,`Error`,`[1, 2, 3]`], answer:0, difficulty:'easy', tag:'functions'},
+{code:`print(True + True)`, options:[`True`,`2`,`Error`,`TrueTrue`], answer:1, difficulty:'medium', tag:'booleans'},
+{code:`print(int("10", 2))`, options:[`10`,`2`,`Error`,`100`], answer:1, difficulty:'medium', tag:'builtins'},
+{code:`print("a" < "b")`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'comparison'},
+{code:`x = [1, 2, 3]\nprint(x * 2)`, options:[`[2, 4, 6]`,`[1, 2, 3, 1, 2, 3]`,`Error`,`[1, 2, 3, 2]`], answer:1, difficulty:'easy', tag:'lists'},
+{code:`print(round(2.5))\nprint(round(3.5))`, options:[`3\n4`,`2\n4`,`3\n3`,`2\n3`], answer:1, difficulty:'hard', tag:'rounding'},
+{code:`class A:\n    x = 1\na = A()\nb = A()\na.x = 2\nprint(a.x, b.x)`, options:[`2 2`,`2 1`,`1 1`,`Error`], answer:1, difficulty:'medium', tag:'classes'},
+{code:`try:\n    print(1/0)\nexcept ZeroDivisionError:\n    print("caught")\nfinally:\n    print("done")`, options:[`caught\ndone`,`done\ncaught`,`Error`,`caught`], answer:0, difficulty:'easy', tag:'exceptions'},
+{code:`print([1, 2, 3][-1])`, options:[`1`,`3`,`Error`,`[3]`], answer:1, difficulty:'easy', tag:'indexing'},
+{code:`print("Python"[1:4])`, options:[`Pyt`,`yth`,`ytho`,`Python`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`x = {1, 2, 3}\ny = {2, 3, 4}\nprint(x & y)`, options:[`{1, 2, 3, 4}`,`{2, 3}`,`{1, 4}`,`Error`], answer:1, difficulty:'medium', tag:'sets'},
+{code:`print(list("hello"))`, options:[`['hello']`,`['h','e','l','l','o']`,`Error`,`hello`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`def f():\n    return\nprint(f())`, options:[`None`,`Error`,`''`,`0`], answer:0, difficulty:'easy', tag:'functions'},
+{code:`print(sorted([3, 1, 2], reverse=True))`, options:[`[1, 2, 3]`,`[3, 2, 1]`,`Error`,`[2, 1, 3]`], answer:1, difficulty:'easy', tag:'sorting'},
+{code:`x = "hello"\nx[0] = "H"\nprint(x)`, options:[`Hello`,`hello`,`TypeError`,`IndexError`], answer:2, difficulty:'medium', tag:'immutability'},
+{code:`print(10 / 3)`, options:[`3`,`3.3333333333333335`,`3.0`,`Error`], answer:1, difficulty:'easy', tag:'operators'},
+{code:`a = [1, 2, 3]\ndel a[1]\nprint(a)`, options:[`[1, 3]`,`[1, 2]`,`[2, 3]`,`Error`], answer:0, difficulty:'easy', tag:'lists'},
+{code:`print(any([0, 0, 1]))\nprint(all([1, 1, 0]))`, options:[`True\nFalse`,`False\nTrue`,`True\nTrue`,`False\nFalse`], answer:0, difficulty:'medium', tag:'builtins'},
+{code:`x = lambda a, b=2: a + b\nprint(x(3))`, options:[`5`,`Error`,`3`,`None`], answer:0, difficulty:'easy', tag:'lambda'},
+{code:`print(2 == 2 == 2)`, options:[`True`,`False`,`Error`,`2`], answer:0, difficulty:'medium', tag:'chained-comparison'},
+{code:`print(1 < 2 < 0)`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'medium', tag:'chained-comparison'},
+{code:`x = [1, 2, 3]\nfor i in x:\n    x.append(i)\n    if len(x) > 6:\n        break\nprint(x)`, options:[`[1, 2, 3]`,`[1, 2, 3, 1, 2, 3, 1]`,`Error`,`infinite loop`], answer:1, difficulty:'hard', tag:'mutation-during-iteration'},
+{code:`print(dict.fromkeys(['a', 'b'], 0))`, options:[`{'a': 0, 'b': 0}`,`{0: ['a', 'b']}`,`Error`,`['a', 'b']`], answer:0, difficulty:'medium', tag:'dicts'},
+{code:`x = 10\ny = x\nx += 5\nprint(y)`, options:[`10`,`15`,`Error`,`5`], answer:0, difficulty:'easy', tag:'immutability'},
+{code:`print(str(3) == 3)`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'easy', tag:'types'},
+{code:`print(3 if False else 5 if True else 7)`, options:[`3`,`5`,`7`,`Error`], answer:1, difficulty:'medium', tag:'ternary'},
+{code:`x = [[0]*3]*3\nx[0][0] = 1\nprint(x)`, options:[`[[1,0,0],[0,0,0],[0,0,0]]`,`[[1,0,0],[1,0,0],[1,0,0]]`,`Error`,`[[0,0,0],[0,0,0],[0,0,0]]`], answer:1, difficulty:'hard', tag:'aliasing'},
+{code:`print(len(range(5)))`, options:[`5`,`4`,`Error: TypeError`,`[0,1,2,3,4]`], answer:0, difficulty:'medium', tag:'range'},
+{code:`print(list(zip([1,2,3], ['a','b'])))`, options:[`[(1,'a'), (2,'b'), (3, None)]`,`[(1,'a'), (2,'b')]`,`Error`,`[(1,2,3), ('a','b')]`], answer:1, difficulty:'medium', tag:'zip'},
+{code:`s = "banana"\nprint(s.count("a"))`, options:[`2`,`3`,`1`,`Error`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print(id([]) == id([]))`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'medium', tag:'identity'},
+{code:`x = 5\ndef f():\n    global x\n    x += 1\nf()\nprint(x)`, options:[`5`,`6`,`Error`,`None`], answer:1, difficulty:'medium', tag:'scoping'},
+{code:`print([x for x in range(3) for y in range(2)])`, options:[`[0, 1, 2]`,`[0, 0, 1, 1, 2, 2]`,`[0, 1, 0, 1, 0, 1]`,`Error`], answer:1, difficulty:'hard', tag:'nested-comprehension'},
+{code:`print("  hi  ".strip())`, options:[`"  hi  "`,`"hi"`,`" hi "`,`Error`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`x = (1, 2, 3)\nx += (4,)\nprint(x)`, options:[`(1, 2, 3, 4)`,`(1, 2, 3)`,`Error`,`[1, 2, 3, 4]`], answer:0, difficulty:'medium', tag:'tuples'},
+{code:`print(min(3, 1, 2), max(3, 1, 2))`, options:[`1 3`,`3 1`,`Error`,`1 2`], answer:0, difficulty:'easy', tag:'builtins'},
+{code:`class Foo:\n    def __init__(self):\n        self.x = 1\nf = Foo()\nprint(hasattr(f, 'x'), hasattr(f, 'y'))`, options:[`True True`,`True False`,`False True`,`Error`], answer:1, difficulty:'medium', tag:'classes'},
+{code:`print(not not True)`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'booleans'},
+{code:`print(bin(10))`, options:[`1010`,`'0b1010'`,`10`,`Error`], answer:1, difficulty:'medium', tag:'builtins'},
+{code:`print(list(enumerate(['a','b']))[1])`, options:[`(1, 'b')`,`(0, 'a')`,`'b'`,`Error`], answer:0, difficulty:'medium', tag:'enumerate'},
+{code:`x = 1\ny = 1\nprint(x is y)`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'hard', tag:'identity'},
+{code:`x = 1000\ny = 1000\nprint(x is y)`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'hard', tag:'identity'},
+{code:`print(f"{3.14159:.2f}")`, options:[`3.14`,`3.1`,`3.14159`,`Error`], answer:0, difficulty:'medium', tag:'fstrings'},
+{code:`def gen():\n    yield 1\n    yield 2\ng = gen()\nprint(next(g))\nprint(next(g))`, options:[`1\n2`,`1\n1`,`2\n2`,`Error`], answer:0, difficulty:'medium', tag:'generators'},
+{code:`x = [1, 2, 3]\nprint(x.pop())\nprint(x)`, options:[`3\n[1, 2, 3]`,`3\n[1, 2]`,`1\n[2, 3]`,`Error`], answer:1, difficulty:'easy', tag:'lists'},
+{code:`print("cat" in ["cat", "dog"])`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'membership'},
+{code:`print("cat" in "concatenate")`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'membership'},
+{code:`x = {"a": 1}\nprint(x.get("b", 99))`, options:[`None`,`99`,`Error: KeyError`,`0`], answer:1, difficulty:'easy', tag:'dicts'},
+{code:`print(divmod(17, 5))`, options:[`(3, 2)`,`3.4`,`(2, 3)`,`Error`], answer:0, difficulty:'medium', tag:'builtins'},
+{code:`x = [3, 1, 4, 1, 5]\nx.sort()\nprint(x)`, options:[`[3, 1, 4, 1, 5]`,`[1, 1, 3, 4, 5]`,`None`,`Error`], answer:1, difficulty:'easy', tag:'sorting'},
+{code:`x = [3, 1, 4]\nprint(x.sort())`, options:[`[1, 3, 4]`,`None`,`Error`,`[3, 1, 4]`], answer:1, difficulty:'hard', tag:'sorting'},
+{code:`print(type(type(1)))`, options:[`<class 'int'>`,`<class 'type'>`,`Error`,`<class 'object'>`], answer:1, difficulty:'hard', tag:'types'},
+{code:`def f(a, b, c=3):\n    print(a, b, c)\nf(1, c=5, b=2)`, options:[`1 2 3`,`1 2 5`,`Error`,`1 5 2`], answer:1, difficulty:'medium', tag:'kwargs'},
+{code:`print([1, 2, 3] == [1, 2, 3])`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'equality'},
+{code:`print([1, 2, 3] is [1, 2, 3])`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'medium', tag:'identity'},
+{code:`x = "abc"\ny = "abc"\nprint(x is y)`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'hard', tag:'string-interning'},
+{code:`print(len("hello world"))`, options:[`10`,`11`,`12`,`Error`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print("Hello".upper().lower())`, options:[`HELLO`,`hello`,`Hello`,`Error`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`x = [1, 2, 3]\ny = [4, 5]\nx.extend(y)\nprint(x)`, options:[`[1, 2, 3, [4, 5]]`,`[1, 2, 3, 4, 5]`,`Error`,`[4, 5, 1, 2, 3]`], answer:1, difficulty:'easy', tag:'lists'},
+{code:`print(list(filter(lambda x: x > 2, [1, 2, 3, 4])))`, options:[`[1, 2]`,`[3, 4]`,`[1, 2, 3, 4]`,`Error`], answer:1, difficulty:'medium', tag:'filter'},
+{code:`print(list(map(lambda x: x*2, [1, 2, 3])))`, options:[`[1, 2, 3]`,`[2, 4, 6]`,`Error`,`[2, 4, 6, 2, 4, 6]`], answer:1, difficulty:'easy', tag:'map'},
+{code:`from functools import reduce\nprint(reduce(lambda a, b: a+b, [1, 2, 3, 4]))`, options:[`10`,`24`,`[1,2,3,4]`,`Error`], answer:0, difficulty:'medium', tag:'reduce'},
+{code:`print(2 and 3)`, options:[`2`,`3`,`True`,`Error`], answer:1, difficulty:'medium', tag:'short-circuit'},
+{code:`print(0 and 3)`, options:[`0`,`3`,`False`,`Error`], answer:0, difficulty:'medium', tag:'short-circuit'},
+{code:`print(0 or 5)`, options:[`0`,`5`,`True`,`Error`], answer:1, difficulty:'medium', tag:'short-circuit'},
+{code:`print([] or "default")`, options:[`[]`,`default`,`Error`,`None`], answer:1, difficulty:'medium', tag:'short-circuit'},
+{code:`x = 5\nprint(x if x > 10 else -x)`, options:[`5`,`-5`,`10`,`Error`], answer:1, difficulty:'easy', tag:'ternary'},
+{code:`print("a,b,,c".split(","))`, options:[`['a', 'b', 'c']`,`['a', 'b', '', 'c']`,`Error`,`['a,b,,c']`], answer:1, difficulty:'medium', tag:'strings'},
+{code:`print(",".join(["a", "b", "c"]))`, options:[`a,b,c`,`"a,b,c"`,`['a,b,c']`,`Error`], answer:0, difficulty:'easy', tag:'strings'},
+{code:`class A:\n    def __str__(self):\n        return "A instance"\nprint(A())`, options:[`<__main__.A object at ...>`,`A instance`,`Error`,`None`], answer:1, difficulty:'medium', tag:'dunder'},
+{code:`print(isinstance(True, int))`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'hard', tag:'inheritance'},
+{code:`print(10 != 10)`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'easy', tag:'comparison'},
+{code:`x = [1, 2, 3]\nprint(3 in x)`, options:[`True`,`False`,`Error`,`3`], answer:0, difficulty:'easy', tag:'membership'},
+{code:`print(abs(-7))`, options:[`-7`,`7`,`Error`,`0`], answer:1, difficulty:'easy', tag:'builtins'},
+{code:`x = 1\ndef f():\n    x = 2\n    def g():\n        nonlocal x\n        x = 3\n    g()\n    print(x)\nf()`, options:[`1`,`2`,`3`,`Error`], answer:2, difficulty:'hard', tag:'nonlocal'},
+{code:`print(list(reversed([1, 2, 3])))`, options:[`[1, 2, 3]`,`[3, 2, 1]`,`Error`,`None`], answer:1, difficulty:'easy', tag:'builtins'},
+{code:`x = {1, 2}\nx.add(2)\nprint(len(x))`, options:[`1`,`2`,`3`,`Error`], answer:1, difficulty:'easy', tag:'sets'},
+{code:`print("%d apples" % 5)`, options:[`%d apples`,`5 apples`,`Error`,`d apples`], answer:1, difficulty:'medium', tag:'formatting'},
+{code:`x = 3\nx **= 2\nprint(x)`, options:[`6`,`9`,`Error`,`5`], answer:1, difficulty:'easy', tag:'operators'},
+{code:`print(list(range(10, 0, -2)))`, options:[`[10, 8, 6, 4, 2]`,`[10, 8, 6, 4, 2, 0]`,`[]`,`Error`], answer:0, difficulty:'medium', tag:'range'},
+{code:`print(len([1, [2, 3], 4]))`, options:[`3`,`4`,`2`,`Error`], answer:0, difficulty:'easy', tag:'lists'},
+{code:`x = "Hello"\nprint(x.replace("l", "L"))`, options:[`HeLLo`,`Hello`,`HeLo`,`Error`], answer:0, difficulty:'easy', tag:'strings'},
+{code:`def f(a, *, b):\n    return a + b\nprint(f(1, b=2))`, options:[`3`,`Error`,`None`,`(1, 2)`], answer:0, difficulty:'hard', tag:'kwonly'},
+{code:`def f(a, *, b):\n    return a + b\nprint(f(1, 2))`, options:[`3`,`TypeError`,`None`,`(1, 2)`], answer:1, difficulty:'hard', tag:'kwonly'},
+{code:`print(str([1, 2, 3]))`, options:[`1 2 3`,`[1, 2, 3]`,`Error`,`(1, 2, 3)`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`x = 1\ny = 2\nx, y = y, x\nprint(x, y)`, options:[`1 2`,`2 1`,`Error`,`2 2`], answer:1, difficulty:'easy', tag:'swap'},
+{code:`print(complex(1, 2))`, options:[`1+2j`,`(1+2j)`,`Error`,`1 2j`], answer:1, difficulty:'medium', tag:'complex'},
+{code:`x = 5\nprint(x.__class__.__name__)`, options:[`5`,`int`,`Error`,`type`], answer:1, difficulty:'medium', tag:'dunder'},
+{code:`print("Test".startswith("Te"))`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'easy', tag:'strings'},
+{code:`d = {}\nd[(1,2)] = "point"\nprint(d[(1,2)])`, options:[`point`,`Error: TypeError`,`None`,`Error: KeyError`], answer:0, difficulty:'medium', tag:'dict-keys'},
+{code:`d = {}\nd[[1,2]] = "point"`, options:[`Works fine`,`TypeError: unhashable type`,`KeyError`,`SyntaxError`], answer:1, difficulty:'hard', tag:'dict-keys'},
+{code:`x = [1, 2, 3]\nprint(x[10:])`, options:[`Error: IndexError`,`[]`,`None`,`[1, 2, 3]`], answer:1, difficulty:'medium', tag:'slicing'},
+{code:`x = [1, 2, 3]\nprint(x[10])`, options:[`Error: IndexError`,`[]`,`None`,`3`], answer:0, difficulty:'medium', tag:'indexing'},
+{code:`print(type(range(5)))`, options:[`<class 'list'>`,`<class 'range'>`,`<class 'tuple'>`,`Error`], answer:1, difficulty:'medium', tag:'range'},
+{code:`x = 5\nif x:\n    print("yes")\nelse:\n    print("no")`, options:[`yes`,`no`,`Error`,`5`], answer:0, difficulty:'easy', tag:'truthiness'},
+{code:`x = 0\nif x:\n    print("yes")\nelse:\n    print("no")`, options:[`yes`,`no`,`Error`,`0`], answer:1, difficulty:'easy', tag:'truthiness'},
+{code:`print(bool([]))\nprint(bool([0]))`, options:[`False\nTrue`,`True\nFalse`,`False\nFalse`,`True\nTrue`], answer:0, difficulty:'medium', tag:'truthiness'},
+{code:`x = "3" + str(4)\nprint(x)`, options:[`7`,`34`,`Error`,`"3""4"`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print(int(3.9))`, options:[`4`,`3`,`3.9`,`Error`], answer:1, difficulty:'easy', tag:'type-conversion'},
+{code:`print(int(-3.9))`, options:[`-4`,`-3`,`-3.9`,`Error`], answer:1, difficulty:'medium', tag:'type-conversion'},
+{code:`x = [1, 2, 3, 4, 5]\nprint(x[1:4:2])`, options:[`[2, 3]`,`[2, 4]`,`[1, 3]`,`[2, 3, 4]`], answer:1, difficulty:'medium', tag:'slicing'},
+{code:`class Counter:\n    count = 0\n    def __init__(self):\n        Counter.count += 1\nCounter()\nCounter()\nprint(Counter.count)`, options:[`0`,`1`,`2`,`Error`], answer:2, difficulty:'hard', tag:'class-attributes'},
+{code:`print(tuple([1, 2, 3]))`, options:[`[1, 2, 3]`,`(1, 2, 3)`,`{1, 2, 3}`,`Error`], answer:1, difficulty:'easy', tag:'type-conversion'},
+{code:`x = 5\ny = "5"\nprint(x == y)`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'easy', tag:'type-comparison'},
+{code:`print(list("abc") + list("def"))`, options:[`['abcdef']`,`['a','b','c','d','e','f']`,`Error`,`['abc','def']`], answer:1, difficulty:'medium', tag:'lists'},
+{code:`x = None\nif not x:\n    print("empty")`, options:[`empty`,`(nothing)`,`Error`,`None`], answer:0, difficulty:'easy', tag:'truthiness'},
+{code:`print(5 & 3)`, options:[`1`,`7`,`8`,`Error`], answer:0, difficulty:'hard', tag:'bitwise'},
+{code:`print(5 | 3)`, options:[`1`,`7`,`8`,`Error`], answer:1, difficulty:'hard', tag:'bitwise'},
+{code:`print(5 ^ 3)`, options:[`1`,`6`,`8`,`Error`], answer:1, difficulty:'hard', tag:'bitwise'},
+{code:`print(~5)`, options:[`-5`,`-6`,`5`,`6`], answer:1, difficulty:'hard', tag:'bitwise'},
+{code:`print(1 << 3)`, options:[`8`,`3`,`4`,`Error`], answer:0, difficulty:'medium', tag:'bitwise'},
+{code:`print(16 >> 2)`, options:[`4`,`64`,`8`,`Error`], answer:0, difficulty:'medium', tag:'bitwise'},
+{code:`x = "Hello, World!"\nprint(x.split())`, options:[`['Hello,', 'World!']`,`['Hello', 'World']`,`Error`,`['Hello, World!']`], answer:0, difficulty:'easy', tag:'strings'},
+{code:`print("{0} {1} {0}".format("a", "b"))`, options:[`a b`,`a b a`,`Error`,`a a b`], answer:1, difficulty:'medium', tag:'formatting'},
+{code:`x = [1, 2, 3]\ny = x\nx = x + [4]\nprint(y)`, options:[`[1, 2, 3, 4]`,`[1, 2, 3]`,`Error`,`[4]`], answer:1, difficulty:'hard', tag:'rebinding'},
+{code:`x = [1, 2, 3]\ny = x\nx += [4]\nprint(y)`, options:[`[1, 2, 3, 4]`,`[1, 2, 3]`,`Error`,`[4]`], answer:0, difficulty:'hard', tag:'inplace-vs-rebind'},
+{code:`print(str.upper("hi"))`, options:[`hi`,`HI`,`Error`,`Hi`], answer:1, difficulty:'medium', tag:'strings'},
+{code:`def outer():\n    x = []\n    def inner():\n        x.append(1)\n    inner()\n    inner()\n    return x\nprint(outer())`, options:[`[]`,`[1]`,`[1, 1]`,`Error`], answer:2, difficulty:'hard', tag:'closures'},
+{code:`print(1_000_000)`, options:[`1_000_000`,`1000000`,`Error`,`1,000,000`], answer:1, difficulty:'medium', tag:'literals'},
+{code:`print(0o10)`, options:[`10`,`8`,`0`,`Error`], answer:1, difficulty:'hard', tag:'literals'},
+{code:`print(0x10)`, options:[`10`,`16`,`0`,`Error`], answer:1, difficulty:'medium', tag:'literals'},
+{code:`x = [1, 2, 3]\nprint(x.index(2))`, options:[`1`,`2`,`0`,`Error`], answer:0, difficulty:'easy', tag:'lists'},
+{code:`x = [1, 2, 3]\nprint(x.index(5))`, options:[`-1`,`None`,`Error: ValueError`,`0`], answer:2, difficulty:'medium', tag:'lists'},
+{code:`s = "hello"\nprint(s.find("z"))`, options:[`Error`,`-1`,`None`,`0`], answer:1, difficulty:'medium', tag:'strings'},
+{code:`print(list(range(0)))`, options:[`[0]`,`[]`,`Error`,`None`], answer:1, difficulty:'easy', tag:'range'},
+{code:`print("Hello"[10:20])`, options:[`Error: IndexError`,`''`,`None`,`Hello`], answer:1, difficulty:'medium', tag:'slicing'},
+{code:`x = {"a": 1}\ny = {"b": 2}\nx.update(y)\nprint(x)`, options:[`{'a': 1}`,`{'a': 1, 'b': 2}`,`{'b': 2}`,`Error`], answer:1, difficulty:'easy', tag:'dicts'},
+{code:`print(hash(1) == hash(1.0))`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'hard', tag:'hashing'},
+{code:`print(len(set("mississippi")))`, options:[`4`,`11`,`5`,`Error`], answer:0, difficulty:'medium', tag:'sets'},
+{code:`x = [1, 2, 3]\nfor i, v in enumerate(x, start=1):\n    print(i, v)`, options:[`0 1\n1 2\n2 3`,`1 1\n2 2\n3 3`,`Error`,`1 2 3`], answer:1, difficulty:'medium', tag:'enumerate'},
+{code:`def f():\n    try:\n        return 1\n    finally:\n        return 2\nprint(f())`, options:[`1`,`2`,`Error`,`None`], answer:1, difficulty:'hard', tag:'exceptions'},
+{code:`class A:\n    pass\nclass B(A):\n    pass\nprint(issubclass(B, A))`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'medium', tag:'inheritance'},
+{code:`print([1, 2, 3][1:1])`, options:[`[]`,`[2]`,`Error`,`[1, 2]`], answer:0, difficulty:'medium', tag:'slicing'},
+{code:`x = 'a' if True else 'b' if True else 'c'\nprint(x)`, options:[`a`,`b`,`c`,`Error`], answer:0, difficulty:'medium', tag:'ternary'},
+{code:`print(sum([1, 2, 3], 10))`, options:[`6`,`16`,`Error`,`[10, 1, 2, 3]`], answer:1, difficulty:'medium', tag:'builtins'},
+{code:`x = "café"\nprint(len(x))`, options:[`3`,`4`,`5`,`Error`], answer:1, difficulty:'medium', tag:'unicode'},
+{code:`print(list(range(5, 5)))`, options:[`[5]`,`[]`,`Error`,`[5, 5]`], answer:1, difficulty:'easy', tag:'range'},
+{code:`x = [1, 2, 3]\ny = [1, 2, 3]\nprint(x == y, x is y)`, options:[`True True`,`True False`,`False True`,`False False`], answer:1, difficulty:'medium', tag:'equality-vs-identity'},
+{code:`print(", ".join(str(i) for i in range(3)))`, options:[`0, 1, 2`,`[0, 1, 2]`,`Error`,`012`], answer:0, difficulty:'medium', tag:'generator-expr'},
+{code:`print(type(lambda: None))`, options:[`<class 'function'>`,`<class 'lambda'>`,`Error`,`<class 'NoneType'>`], answer:0, difficulty:'hard', tag:'lambda'},
+{code:`x = 3.0\nprint(x.is_integer())`, options:[`True`,`False`,`Error`,`3`], answer:0, difficulty:'hard', tag:'float-methods'},
+{code:`print(pow(2, 10))`, options:[`20`,`1024`,`100`,`Error`], answer:1, difficulty:'easy', tag:'builtins'},
+{code:`print(pow(2, 10, 100))`, options:[`1024`,`24`,`100`,`Error`], answer:1, difficulty:'hard', tag:'builtins'},
+{code:`x = {}\nprint(bool(x))`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'easy', tag:'truthiness'},
+{code:`print(list({1: 'a', 2: 'b'}.values()))`, options:[`[1, 2]`,`['a', 'b']`,`Error`,`[(1, 'a'), (2, 'b')]`], answer:1, difficulty:'easy', tag:'dicts'},
+{code:`print(list({1: 'a', 2: 'b'}.items()))`, options:[`[1, 2]`,`['a', 'b']`,`[(1, 'a'), (2, 'b')]`,`Error`], answer:2, difficulty:'medium', tag:'dicts'},
+{code:`x = [1, 2, 3]\nx.insert(1, 99)\nprint(x)`, options:[`[1, 99, 2, 3]`,`[99, 1, 2, 3]`,`[1, 2, 99, 3]`,`Error`], answer:0, difficulty:'easy', tag:'lists'},
+{code:`print(str(None))`, options:[`null`,`None`,`Error`,`''`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`x = "10"\ny = "20"\nprint(x + y)`, options:[`30`,`1020`,`Error`,`"10""20"`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print(int("  42  "))`, options:[`Error`,`42`,`'42'`,`' 42 '`], answer:1, difficulty:'medium', tag:'type-conversion'},
+{code:`print(int("42.0"))`, options:[`42`,`Error: ValueError`,`42.0`,`0`], answer:1, difficulty:'hard', tag:'type-conversion'},
+{code:`print(float("42"))`, options:[`42`,`42.0`,`Error`,`'42.0'`], answer:1, difficulty:'easy', tag:'type-conversion'},
+{code:`x = [5, 3, 8, 1]\nprint(sorted(x)[0], sorted(x)[-1])`, options:[`1 8`,`5 1`,`8 1`,`Error`], answer:0, difficulty:'easy', tag:'sorting'},
+{code:`print("Hello World".title())`, options:[`Hello world`,`Hello World`,`HELLO WORLD`,`hello world`], answer:1, difficulty:'medium', tag:'strings'},
+{code:`x = [1, 2, [3, 4]]\nprint(len(x))`, options:[`3`,`4`,`2`,`Error`], answer:0, difficulty:'easy', tag:'lists'},
+{code:`x, *y = [1, 2, 3, 4]\nprint(x, y)`, options:[`1 [2, 3, 4]`,`1 (2, 3, 4)`,`[1] [2,3,4]`,`Error`], answer:0, difficulty:'medium', tag:'unpacking'},
+{code:`*x, y = [1, 2, 3, 4]\nprint(x, y)`, options:[`[1, 2, 3] 4`,`1 [2,3,4]`,`Error`,`[1,2,3,4] 4`], answer:0, difficulty:'medium', tag:'unpacking'},
+{code:`a, *b, c = [1, 2, 3, 4, 5]\nprint(a, b, c)`, options:[`1 [2, 3, 4] 5`,`1 [2,3] 4`,`Error`,`1 2 [3,4,5]`], answer:0, difficulty:'hard', tag:'unpacking'},
+{code:`print(callable(print))`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'medium', tag:'builtins'},
+{code:`x = 5\ndel x\nprint(x)`, options:[`5`,`None`,`NameError`,`Error: SyntaxError`], answer:2, difficulty:'medium', tag:'del'},
+{code:`print(2 ** -1)`, options:[`-2`,`0.5`,`Error`,`-0.5`], answer:1, difficulty:'medium', tag:'operators'},
+{code:`print(-2 ** 2)`, options:[`4`,`-4`,`Error`,`-2`], answer:1, difficulty:'hard', tag:'operator-precedence'},
+{code:`print((-2) ** 2)`, options:[`4`,`-4`,`Error`,`-2`], answer:0, difficulty:'medium', tag:'operator-precedence'},
+{code:`x = [1, 2, 3]\nprint(x.remove(2))\nprint(x)`, options:[`2\n[1, 3]`,`None\n[1, 3]`,`None\n[1, 2, 3]`,`Error`], answer:1, difficulty:'medium', tag:'lists'},
+{code:`x = "AbC"\nprint(x.swapcase())`, options:[`aBc`,`ABC`,`abc`,`Error`], answer:0, difficulty:'medium', tag:'strings'},
+{code:`print([].append(1))`, options:[`[1]`,`None`,`Error`,`1`], answer:1, difficulty:'medium', tag:'lists'},
+{code:`x = "1,2,3"\nprint(sum(int(i) for i in x.split(",")))`, options:[`6`,`123`,`Error`,`'123'`], answer:0, difficulty:'medium', tag:'generator-expr'},
+{code:`print(list(range(3)) == [0, 1, 2])`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'medium', tag:'range'},
+{code:`def f(a, b):\n    return a - b\nprint(f(b=1, a=5))`, options:[`4`,`-4`,`Error`,`6`], answer:0, difficulty:'easy', tag:'kwargs'},
+{code:`x = 5\ny = 2\nprint(x / y, x // y)`, options:[`2.5 2`,`2.5 2.0`,`2 2`,`Error`], answer:0, difficulty:'medium', tag:'operators'},
+{code:`print("A" == "a")`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'easy', tag:'case-sensitivity'},
+{code:`print(ord('A'))`, options:[`65`,`97`,`1`,`Error`], answer:0, difficulty:'medium', tag:'builtins'},
+{code:`print(chr(97))`, options:[`A`,`a`,`97`,`Error`], answer:1, difficulty:'medium', tag:'builtins'},
+{code:`class A:\n    def __len__(self):\n        return 0\na = A()\nprint(bool(a))`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'hard', tag:'dunder'},
+{code:`print(list(range(1, 10, 3)))`, options:[`[1, 4, 7]`,`[1, 4, 7, 10]`,`[1, 3, 6, 9]`,`Error`], answer:0, difficulty:'medium', tag:'range'},
+{code:`x = "hello world"\nprint(x.capitalize())`, options:[`Hello World`,`Hello world`,`HELLO WORLD`,`hello world`], answer:1, difficulty:'medium', tag:'strings'},
+{code:`x = [1, 2, 3]\ny = tuple(x)\nprint(y)`, options:[`[1, 2, 3]`,`(1, 2, 3)`,`{1, 2, 3}`,`Error`], answer:1, difficulty:'easy', tag:'type-conversion'},
+{code:`print(3 * "ab")`, options:[`ababab`,`3ab`,`Error`,`aabbaabbaabb`], answer:0, difficulty:'easy', tag:'strings'},
+{code:`x = ["a", "b", "c"]\nprint(x[::2])`, options:[`['a', 'c']`,`['a', 'b']`,`['b']`,`Error`], answer:0, difficulty:'medium', tag:'slicing'},
+{code:`print(all([]))`, options:[`True`,`False`,`Error`,`None`], answer:0, difficulty:'hard', tag:'builtins'},
+{code:`print(any([]))`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'hard', tag:'builtins'},
+{code:`try:\n    x = [1][5]\nexcept IndexError as e:\n    print("caught:", type(e).__name__)`, options:[`caught: IndexError`,`Error`,`caught: Error`,`None`], answer:0, difficulty:'medium', tag:'exceptions'},
+{code:`x = 5\nassert x == 5\nprint("passed")`, options:[`passed`,`AssertionError`,`Error`,`None`], answer:0, difficulty:'medium', tag:'assert'},
+{code:`x = 5\nassert x == 6, "not six"\nprint("passed")`, options:[`passed`,`AssertionError: not six`,`Error`,`not six`], answer:1, difficulty:'medium', tag:'assert'},
+{code:`print(list(range(5))[-1])`, options:[`5`,`4`,`Error`,`0`], answer:1, difficulty:'easy', tag:'indexing'},
+{code:`x = {"a": [1, 2]}\nx["a"].append(3)\nprint(x)`, options:[`{'a': [1, 2]}`,`{'a': [1, 2, 3]}`,`Error`,`{'a': 3}`], answer:1, difficulty:'medium', tag:'nested-mutation'},
+{code:`print(str.isdigit("123"))`, options:[`Error: TypeError`,`True`,`False`,`123`], answer:0, difficulty:'hard', tag:'strings'},
+{code:`print("123".isdigit())`, options:[`True`,`False`,`Error`,`123`], answer:0, difficulty:'easy', tag:'strings'},
+{code:`print("12.3".isdigit())`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'medium', tag:'strings'},
+{code:`x = None\ny = x or []\ny.append(1)\nprint(x, y)`, options:[`None [1]`,`[1] [1]`,`Error`,`None None`], answer:0, difficulty:'hard', tag:'short-circuit'},
+{code:`print(list(range(10))[::-1][0])`, options:[`0`,`9`,`Error`,`-1`], answer:1, difficulty:'medium', tag:'slicing'},
+{code:`def f(x):\n    x += 1\n    return x\ny = 5\nprint(f(y), y)`, options:[`6 6`,`6 5`,`5 6`,`Error`], answer:1, difficulty:'medium', tag:'pass-by-value'},
+{code:`def f(x):\n    x.append(1)\ny = [1, 2]\nf(y)\nprint(y)`, options:[`[1, 2]`,`[1, 2, 1]`,`Error`,`[1]`], answer:1, difficulty:'medium', tag:'pass-by-reference'},
+{code:`print(list("Python")[::2])`, options:[`['P','t','o']`,`['y','h','n']`,`['P','y','t']`,`Error`], answer:0, difficulty:'hard', tag:'slicing'},
+{code:`x = 7\nprint(f"x is {'odd' if x % 2 else 'even'}")`, options:[`x is odd`,`x is even`,`Error`,`x is {'odd'}`], answer:0, difficulty:'medium', tag:'fstrings'},
+{code:`print(round(4.5))\nprint(round(5.5))`, options:[`4\n6`,`5\n6`,`4\n5`,`5\n5`], answer:0, difficulty:'hard', tag:'rounding'},
+{code:`x = ['a', 'b', 'c']\nfor i in range(len(x)-1, -1, -1):\n    print(x[i], end='')`, options:[`abc`,`cba`,`Error`,`(nothing)`], answer:1, difficulty:'hard', tag:'loops'},
+{code:`print(2 * 3 + 4 * 5)`, options:[`70`,`26`,`46`,`Error`], answer:1, difficulty:'easy', tag:'operator-precedence'},
+{code:`print((2 + 3) * (4 + 5))`, options:[`26`,`45`,`19`,`Error`], answer:1, difficulty:'easy', tag:'operator-precedence'},
+{code:`x = 10\nx += 5\nx -= 3\nx *= 2\nprint(x)`, options:[`24`,`22`,`20`,`Error`], answer:0, difficulty:'easy', tag:'operators'},
+{code:`x = [i**2 for i in range(5)]\nprint(x)`, options:[`[0, 1, 4, 9, 16]`,`[1, 4, 9, 16, 25]`,`Error`,`[0, 2, 4, 6, 8]`], answer:0, difficulty:'easy', tag:'comprehension'},
+{code:`print({i: i**2 for i in range(3)})`, options:[`{0: 0, 1: 1, 2: 4}`,`[0, 1, 4]`,`Error`,`{0, 1, 4}`], answer:0, difficulty:'medium', tag:'dict-comprehension'},
+{code:`print(next(iter([1, 2, 3])))`, options:[`1`,`[1, 2, 3]`,`Error`,`None`], answer:0, difficulty:'medium', tag:'iterators'},
+{code:`x = iter([1, 2])\nnext(x)\nnext(x)\nprint(next(x))`, options:[`Error: StopIteration`,`None`,`2`,`1`], answer:0, difficulty:'hard', tag:'iterators'},
+{code:`print(type(1).__name__)`, options:[`int`,`'int'`,`Error`,`type`], answer:0, difficulty:'medium', tag:'dunder'},
+{code:`a = b = c = 5\nb = 10\nprint(a, b, c)`, options:[`10 10 10`,`5 10 5`,`Error`,`5 5 5`], answer:1, difficulty:'medium', tag:'multiple-assignment'},
+{code:`x = "hello"\nprint(x[100:200])`, options:[`Error`,`''`,`hello`,`None`], answer:1, difficulty:'medium', tag:'slicing'},
+{code:`print(len(range(0, 100, 10)))`, options:[`100`,`10`,`9`,`Error'`], answer:1, difficulty:'medium', tag:'range'},
+{code:`x = True\ny = False\nprint(x + y, x - y, x * y)`, options:[`1 1 0`,`True False False`,`Error`,`2 0 1`], answer:0, difficulty:'hard', tag:'booleans'},
+{code:`print("Test" if 5 > 3 else "No")`, options:[`Test`,`No`,`True`,`Error`], answer:0, difficulty:'easy', tag:'ternary'},
+{code:`x = [1, 2, 3]\nx[1:2] = [9, 9]\nprint(x)`, options:[`[1, 9, 9, 3]`,`[1, [9,9], 3]`,`Error`,`[1, 9, 3]`], answer:0, difficulty:'hard', tag:'slice-assignment'},
+{code:`x = [1, 2, 3]\nx[:] = [4, 5]\nprint(x)`, options:[`[1, 2, 3, 4, 5]`,`[4, 5]`,`Error`,`[4, 5, 3]`], answer:1, difficulty:'hard', tag:'slice-assignment'},
+{code:`print("%.2f" % 3.14159)`, options:[`3.14`,`3.1`,`3.14159`,`Error`], answer:0, difficulty:'medium', tag:'formatting'},
+{code:`x = 1\nwhile x < 4:\n    print(x, end=" ")\n    x += 1`, options:[`1 2 3`,`1 2 3 4`,`Error`,`0 1 2 3`], answer:0, difficulty:'easy', tag:'loops'},
+{code:`for i in range(3):\n    if i == 1:\n        continue\n    print(i, end="")`, options:[`012`,`02`,`01`,`0`], answer:1, difficulty:'medium', tag:'loops'},
+{code:`for i in range(5):\n    if i == 3:\n        break\n    print(i, end="")\nelse:\n    print("done")`, options:[`012done`,`012`,`01234done`,`Error`], answer:1, difficulty:'hard', tag:'for-else'},
+{code:`for i in range(3):\n    print(i, end="")\nelse:\n    print("done")`, options:[`012`,`012done`,`Error`,`done`], answer:1, difficulty:'hard', tag:'for-else'},
+{code:`x = ["apple", "Banana", "cherry"]\nprint(sorted(x))`, options:[`['Banana', 'apple', 'cherry']`,`['apple', 'Banana', 'cherry']`,`['apple', 'cherry', 'Banana']`,`Error`], answer:0, difficulty:'hard', tag:'sorting'},
+{code:`x = ["apple", "Banana", "cherry"]\nprint(sorted(x, key=str.lower))`, options:[`['Banana', 'apple', 'cherry']`,`['apple', 'Banana', 'cherry']`,`Error`,`['cherry', 'Banana', 'apple']`], answer:1, difficulty:'hard', tag:'sorting'},
+{code:`print(max(["a", "abc", "ab"], key=len))`, options:[`a`,`abc`,`ab`,`Error`], answer:1, difficulty:'medium', tag:'builtins'},
+{code:`x = {'b': 2, 'a': 1}\nprint(sorted(x))`, options:[`[1, 2]`,`['a', 'b']`,`['b', 'a']`,`Error`], answer:1, difficulty:'medium', tag:'dicts'},
+{code:`print(list(range(3, -1, -1)))`, options:[`[3, 2, 1, 0]`,`[3, 2, 1]`,`[]`,`Error`], answer:0, difficulty:'medium', tag:'range'},
+{code:`def f():\n    x = 1\n    x = 2\n    return x\nprint(f())`, options:[`1`,`2`,`Error`,`None`], answer:1, difficulty:'easy', tag:'basics'},
+{code:`print(type(None))`, options:[`<class 'None'>`,`<class 'NoneType'>`,`None`,`Error`], answer:1, difficulty:'medium', tag:'types'},
+{code:`x = [1, 2, 3]\nprint(x.count(2))`, options:[`0`,`1`,`2`,`Error`], answer:1, difficulty:'easy', tag:'lists'},
+{code:`x = "aaa"\nprint(x.count("a"))`, options:[`1`,`3`,`0`,`Error`], answer:1, difficulty:'easy', tag:'strings'},
+{code:`print(list(range(2, 20, 5)))`, options:[`[2, 7, 12, 17]`,`[2, 7, 12, 17, 22]`,`[2, 4, 6, 8]`,`Error`], answer:0, difficulty:'medium', tag:'range'},
+{code:`x = 5\nprint(x > 3 and x < 10)`, options:[`True`,`False`,`Error`,`5`], answer:0, difficulty:'easy', tag:'boolean-logic'},
+{code:`x = "  "\nprint(bool(x.strip()))`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'medium', tag:'truthiness'},
+{code:`x = 5\ny = x == 5\nprint(type(y))`, options:[`<class 'int'>`,`<class 'bool'>`,`Error`,`<class 'NoneType'>`], answer:1, difficulty:'medium', tag:'types'},
+{code:`def f(a, b, *args, **kwargs):\n    print(len(args), len(kwargs))\nf(1, 2, 3, 4, x=5, y=6)`, options:[`2 2`,`4 2`,`2 4`,`Error`], answer:0, difficulty:'hard', tag:'args-kwargs'},
+{code:`print([1, 2, 3].__class__)`, options:[`list`,`<class 'list'>`,`Error`,`[1, 2, 3]`], answer:1, difficulty:'medium', tag:'dunder'},
+{code:`x = 'y' in {'x': 1, 'y': 2}\nprint(x)`, options:[`True`,`False`,`Error`,`2`], answer:0, difficulty:'medium', tag:'dict-membership'},
+{code:`x = 2 in {'x': 1, 'y': 2}\nprint(x)`, options:[`True`,`False`,`Error`,`None`], answer:1, difficulty:'hard', tag:'dict-membership'},
+{code:`print("Hello"[1] + "Hello"[-1])`, options:[`Ho`,`eo`,`Ho`,`el`], answer:1, difficulty:'medium', tag:'indexing'},
+{code:`x = [1, 2, 3]\nx, y = x[0], x[1:]\nprint(x, y)`, options:[`1 [2, 3]`,`[1] [2, 3]`,`Error`,`1 2, 3`], answer:0, difficulty:'medium', tag:'slicing'},
+];
+
+// ---------- Syntax highlighting (lightweight, regex-based) ----------
+function highlight(code){
+  const escaped = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lines = escaped.split('\n');
+  const kw = /\b(def|return|if|elif|else|for|while|in|is|not|and|or|class|try|except|finally|import|from|as|lambda|yield|pass|break|continue|global|nonlocal|del|assert|with|raise|None|True|False)\b/g;
+  const fn = /\b(print|len|range|list|dict|set|tuple|str|int|float|bool|sum|min|max|sorted|reversed|enumerate|zip|map|filter|abs|round|type|isinstance|issubclass|hasattr|callable|iter|next|divmod|pow|bin|hex|oct|ord|chr|complex|any|all|id|hash)\b(?=\()/g;
+  const str = /('([^'\\]|\\.)*'|"([^"\\]|\\.)*")/g;
+  const num = /\b(\d+\.?\d*)\b/g;
+  const com = /(#.*)$/gm;
+
+  return lines.map(line => {
+    let tokens = [{text: line, type: null}];
+    function applyPattern(regex, type){
+      const next = [];
+      for(const tok of tokens){
+        if(tok.type){ next.push(tok); continue; }
+        let last = 0; let m;
+        regex.lastIndex = 0;
+        while((m = regex.exec(tok.text)) !== null){
+          if(m.index > last) next.push({text: tok.text.slice(last, m.index), type:null});
+          next.push({text: m[0], type});
+          last = m.index + m[0].length;
+          if(m[0].length === 0) regex.lastIndex++;
+        }
+        if(last < tok.text.length) next.push({text: tok.text.slice(last), type:null});
+      }
+      tokens = next;
+    }
+    applyPattern(com, 'com');
+    applyPattern(str, 'str');
+    applyPattern(kw, 'kw');
+    applyPattern(fn, 'fn');
+    applyPattern(num, 'num');
+    return tokens.map(t => t.type ? `<span class="code-${t.type}">${t.text}</span>` : t.text).join('');
+  }).join('\n');
+}
+
+// ---------- State ----------
+let state = {
+  roundLen: 10,
+  difficulty: 'all',
+  flashSecs: 7,
+  pool: [],
+  qIndex: 0,
+  score: 0,
+  streak: 0,
+  bestStreak: 0,
+  answers: [], // {q, chosen, correct, timeTaken}
+  phase: 'idle', // memorize | recall | feedback
+  timerHandle: null,
+  memStart: 0,
+  recallStart: 0,
+  recallLimit: 10,
+};
+
+const LS_KEY = 'pyflash_stats_v1';
+function loadStats(){
+  try{ return JSON.parse(localStorage.getItem(LS_KEY)) || {best:0, history:[]}; }
+  catch(e){ return {best:0, history:[]}; }
+}
+function saveStats(s){ try{ localStorage.setItem(LS_KEY, JSON.stringify(s)); }catch(e){} }
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// ---------- Screen management ----------
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ---------- Home screen interactions ----------
+document.querySelectorAll('#lengthGrid .mode-card').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    document.querySelectorAll('#lengthGrid .mode-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.roundLen = parseInt(card.dataset.len);
+  });
+});
+document.querySelectorAll('#diffGrid .mode-card').forEach(card=>{
+  card.addEventListener('click', ()=>{
+    document.querySelectorAll('#diffGrid .mode-card').forEach(c=>c.classList.remove('selected'));
+    card.classList.add('selected');
+    state.difficulty = card.dataset.diff;
+  });
+});
+document.querySelectorAll('.timer-pill').forEach(pill=>{
+  pill.addEventListener('click', ()=>{
+    document.querySelectorAll('.timer-pill').forEach(p=>p.classList.remove('selected'));
+    pill.classList.add('selected');
+    state.flashSecs = parseInt(pill.dataset.secs);
+  });
+});
+
+function updateTopStats(){
+  const s = loadStats();
+  document.getElementById('topBest').textContent = s.best || '—';
+}
+updateTopStats();
+document.getElementById('poolCount').textContent = QUESTION_BANK.length;
+
+document.getElementById('startBtn').addEventListener('click', startRound);
+
+// ---------- Round setup ----------
+function startRound(){
+  let bank = QUESTION_BANK;
+  if(state.difficulty !== 'all'){
+    bank = bank.filter(q => q.difficulty === state.difficulty);
+  }
+  const len = Math.min(state.roundLen, bank.length);
+  state.pool = shuffle(bank).slice(0, len);
+  state.qIndex = 0;
+  state.score = 0;
+  state.streak = 0;
+  state.bestStreak = 0;
+  state.answers = [];
+  state.recallLimit = state.flashSecs > 5 ? 10 : 8;
+
+  showScreen('screen-quiz');
+  nextQuestion();
+}
+
+function currentQ(){ return state.pool[state.qIndex]; }
+
+function nextQuestion(){
+  if(state.qIndex >= state.pool.length){
+    finishRound();
+    return;
+  }
+  clearTimeout(state.timerHandle);
+  cancelAnimationFrame(state._raf);
+  const q = currentQ();
+
+  document.getElementById('hudQNum').textContent = `Q${state.qIndex+1}/${state.pool.length}`;
+  document.getElementById('progressFill').style.width = `${(state.qIndex/state.pool.length)*100}%`;
+  document.getElementById('hudScore').textContent = state.score;
+  document.getElementById('hudStreak').textContent = state.streak > 1 ? `🔥${state.streak}` : '';
+
+  document.getElementById('codeDisplay').innerHTML = highlight(q.code);
+  document.getElementById('stageLabel').textContent = `snippet_${state.qIndex+1}.py`;
+  document.getElementById('optionsGrid').classList.add('hidden');
+  document.getElementById('optionsGrid').innerHTML = '';
+  document.getElementById('recallBanner').classList.add('hidden');
+  document.getElementById('nextHint').classList.add('hidden');
+  document.getElementById('feedbackStrip').textContent = '';
+  document.getElementById('feedbackStrip').className = 'feedback-strip';
+  document.getElementById('timerRing').classList.remove('urgent');
+  document.getElementById('memorizeBar').style.transition = 'none';
+  document.getElementById('memorizeBar').style.transform = 'scaleX(1)';
+  void document.getElementById('memorizeBar').offsetWidth; // reflow
+
+  state.phase = 'memorize';
+  const dur = state.flashSecs * 1000;
+  document.getElementById('memorizeBar').style.transition = `transform ${dur}ms linear`;
+  requestAnimationFrame(()=>{
+    document.getElementById('memorizeBar').style.transform = 'scaleX(0)';
+  });
+
+  // Ring countdown
+  const ring = document.getElementById('ringFg');
+  const ringNum = document.getElementById('ringNum');
+  const circumference = 119.4;
+  state.memStart = performance.now();
+  function tickRing(){
+    const elapsed = (performance.now() - state.memStart) / 1000;
+    const remain = Math.max(0, state.flashSecs - elapsed);
+    ring.style.strokeDashoffset = circumference * (1 - remain/state.flashSecs);
+    ringNum.textContent = Math.ceil(remain);
+    if(remain <= 2) document.getElementById('timerRing').classList.add('urgent');
+    if(remain > 0){
+      state._raf = requestAnimationFrame(tickRing);
+    }
+  }
+  ring.style.strokeDashoffset = 0;
+  tickRing();
+
+  state.timerHandle = setTimeout(showOptions, dur);
+}
+
+function showOptions(){
+  cancelAnimationFrame(state._raf);
+  state.phase = 'recall';
+  const q = currentQ();
+  document.getElementById('codeDisplay').innerHTML = '<div class="code-blank-wait">— gone —</div>';
+  document.getElementById('timerRing').classList.remove('urgent');
+
+  const grid = document.getElementById('optionsGrid');
+  grid.innerHTML = '';
+  const keys = ['A','B','C','D'];
+  q.options.forEach((opt, i)=>{
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-key">${keys[i]}</span><span>${opt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span>`;
+    btn.addEventListener('click', ()=>selectAnswer(i));
+    grid.appendChild(btn);
+  });
+  grid.classList.remove('hidden');
+  document.getElementById('recallBanner').classList.remove('hidden');
+
+  state.recallStart = performance.now();
+  const recallTimerEl = document.getElementById('recallTimer');
+  const ring = document.getElementById('ringFg');
+  const ringNum = document.getElementById('ringNum');
+  const circumference = 119.4;
+  document.getElementById('timerRing').classList.remove('urgent');
+
+  function tickRecall(){
+    const elapsed = (performance.now() - state.recallStart)/1000;
+    const remain = Math.max(0, state.recallLimit - elapsed);
+    recallTimerEl.textContent = Math.ceil(remain);
+    ring.style.strokeDashoffset = circumference * (1 - remain/state.recallLimit);
+    ringNum.textContent = Math.ceil(remain);
+    if(remain <= 3) document.getElementById('timerRing').classList.add('urgent');
+    if(remain > 0 && state.phase === 'recall'){
+      state._raf = requestAnimationFrame(tickRecall);
+    }
+  }
+  tickRecall();
+  state.timerHandle = setTimeout(()=>{
+    if(state.phase === 'recall') selectAnswer(-1); // timeout
+  }, state.recallLimit * 1000);
+}
+
+function selectAnswer(choiceIdx){
+  if(state.phase !== 'recall') return;
+  cancelAnimationFrame(state._raf);
+  clearTimeout(state.timerHandle);
+  state.phase = 'feedback';
+  const q = currentQ();
+  const timeTaken = (performance.now() - state.recallStart)/1000;
+  const correct = choiceIdx === q.answer;
+
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach((btn, i)=>{
+    btn.disabled = true;
+    if(i === q.answer) btn.classList.add('correct');
+    else if(i === choiceIdx) btn.classList.add('wrong');
+    else btn.classList.add('faded');
+  });
+
+  const feedback = document.getElementById('feedbackStrip');
+  if(correct){
+    state.score++;
+    state.streak++;
+    state.bestStreak = Math.max(state.bestStreak, state.streak);
+    feedback.textContent = choiceIdx === -1 ? 'time up' : ['nice.','clean.','sharp.','on point.','got it.'][Math.floor(Math.random()*5)];
+    feedback.className = 'feedback-strip correct';
+  } else {
+    state.streak = 0;
+    feedback.textContent = choiceIdx === -1 ? "time's up — that's the actual output above" : 'not quite — correct one highlighted';
+    feedback.className = 'feedback-strip wrong';
+  }
+  document.getElementById('hudScore').textContent = state.score;
+  document.getElementById('hudStreak').textContent = '';
+
+  state.answers.push({q, chosen: choiceIdx, correct, timeTaken: Math.min(timeTaken, state.recallLimit)});
+
+  document.getElementById('nextHint').classList.remove('hidden');
+  state._advanceHandler = ()=>{ state.qIndex++; nextQuestion(); };
+  setTimeout(()=>{
+    document.getElementById('screen-quiz').addEventListener('click', state._advanceHandler, {once:true});
+  }, 250);
+  document.addEventListener('keydown', enterAdvance, {once:true});
+}
+
+function enterAdvance(e){
+  if(e.key === 'Enter' && state.phase === 'feedback'){
+    document.getElementById('screen-quiz').removeEventListener('click', state._advanceHandler);
+    state.qIndex++; nextQuestion();
+  } else if(state.phase === 'feedback'){
+    document.addEventListener('keydown', enterAdvance, {once:true});
+  }
+}
+
+// keyboard shortcuts for A/B/C/D during recall
+document.addEventListener('keydown', (e)=>{
+  if(state.phase !== 'recall') return;
+  const map = {a:0,b:1,c:2,d:3,'1':0,'2':1,'3':2,'4':3};
+  const k = e.key.toLowerCase();
+  if(map.hasOwnProperty(k)) selectAnswer(map[k]);
+});
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && document.getElementById('screen-home').classList.contains('active')){
+    startRound();
+  }
+});
+
+// ---------- Results ----------
+function finishRound(){
+  const total = state.pool.length;
+  const acc = total ? Math.round((state.score/total)*100) : 0;
+  const avgTime = state.answers.length ? (state.answers.reduce((a,b)=>a+b.timeTaken,0)/state.answers.length) : 0;
+
+  const stats = loadStats();
+  const isNewBest = state.score > (stats.best || 0);
+  if(isNewBest) stats.best = state.score;
+  stats.history = stats.history || [];
+  stats.history.push({date: Date.now(), score: state.score, total, acc});
+  if(stats.history.length > 50) stats.history = stats.history.slice(-50);
+  saveStats(stats);
+  updateTopStats();
+
+  document.getElementById('bestBadgeWrap').innerHTML = isNewBest
+    ? `<div class="best-badge">★ new best score</div>` : '';
+  document.getElementById('resScore').textContent = state.score;
+  document.getElementById('resTotal').textContent = total;
+  document.getElementById('resAcc').textContent = acc + '%';
+  document.getElementById('resAvgTime').textContent = avgTime.toFixed(1) + 's';
+  document.getElementById('resBestStreak').textContent = state.bestStreak;
+
+  let label = 'Keep drilling — speed comes with reps.';
+  if(acc >= 90) label = "Elite reflexes. You'd crush this event.";
+  else if(acc >= 75) label = 'Strong run — a bit more speed and you\'re set.';
+  else if(acc >= 50) label = 'Solid base. Review the misses below.';
+  document.getElementById('resLabel').textContent = label;
+
+  // tag breakdown — group by tag, show accuracy
+  const tagStats = {};
+  state.answers.forEach(a=>{
+    const t = a.q.tag;
+    tagStats[t] = tagStats[t] || {correct:0, total:0};
+    tagStats[t].total++;
+    if(a.correct) tagStats[t].correct++;
+  });
+  const tagArr = Object.entries(tagStats)
+    .map(([tag, v])=>({tag, ...v, rate: v.correct/v.total}))
+    .sort((a,b)=>a.rate-b.rate)
+    .slice(0, 6);
+  const tagHtml = tagArr.map(t=>{
+    const pct = Math.round(t.rate*100);
+    const cls = t.rate >= 0.75 ? '' : t.rate >= 0.4 ? 'mid' : 'weak';
+    return `<div class="tag-row">
+      <div class="tag-row-name">${t.tag}</div>
+      <div class="tag-row-bar"><div class="tag-row-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="tag-row-frac">${t.correct}/${t.total}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('tagBreakdown').innerHTML = tagHtml || '<div style="font-family:var(--mono); font-size:12px; color:var(--text-faint);">not enough data yet</div>';
+
+  showScreen('screen-results');
+}
+
+document.getElementById('playAgainBtn').addEventListener('click', ()=>{
+  showScreen('screen-home');
+});
+
+document.getElementById('reviewBtn').addEventListener('click', ()=>{
+  const misses = state.answers.filter(a=>!a.correct);
+  const list = document.getElementById('reviewList');
+  if(misses.length === 0){
+    list.innerHTML = `<div style="font-family:var(--mono); color:var(--text-dim); text-align:center; padding:40px 0;">perfect round — nothing to review 🎉</div>`;
+  } else {
+    list.innerHTML = misses.map(m=>{
+      const keys=['A','B','C','D'];
+      const optsHtml = m.q.options.map((o,i)=>{
+        let cls = '';
+        if(i===m.q.answer) cls='correct';
+        else if(i===m.chosen) cls='wrong';
+        return `<div class="option-btn ${cls}" style="cursor:default;"><span class="option-key">${keys[i]}</span><span>${o.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></div>`;
+      }).join('');
+      return `<div class="code-stage">
+        <div class="code-stage-bar"><div class="code-dot r"></div><div class="code-dot y"></div><div class="code-dot g"></div><div class="code-stage-label">${m.q.tag}</div></div>
+        <div class="code-stage-body" style="justify-content:flex-start; padding:20px;"><pre>${highlight(m.q.code)}</pre></div>
+      </div>
+      <div class="options-grid">${optsHtml}</div>`;
+    }).join('<div style="height:6px;"></div>');
+  }
+  showScreen('screen-review');
+});
+
+document.getElementById('backFromReview').addEventListener('click', ()=>{
+  showScreen('screen-results');
+});
+</script>
+</body>
+</html>
